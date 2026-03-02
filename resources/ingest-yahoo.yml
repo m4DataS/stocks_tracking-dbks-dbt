@@ -1,0 +1,35 @@
+resources:
+  jobs:
+    finan_tracking_ingestion:
+      name: finan_tracking_ingestion
+      tasks:
+        - task_key: ingestion_yahoof
+          spark_python_task:
+            python_file: /Workspace/Users/manoah4datascience@gmail.com/stocks_tracking-dbks-dbt/ingestion/python-multi-threading.py
+            parameters:
+              - --tickers
+              - all
+              - --start
+              - 2000-01-01
+              - --end
+              - 2026-02-07
+              - --output
+              - /Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/
+              - --max_workers
+              - "10"
+              - --chunk_size
+              - "5"
+          environment_key: ingestion_yahoof_environment
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "4"
+        - environment_key: ingestion_yahoof_environment
+          spec:
+            dependencies:
+              - -r
+                /Workspace/Users/manoah4datascience@gmail.com/stocks_tracking-dbks-dbt/ingestion/requirements.txt
+            environment_version: "4"
+      performance_target: PERFORMANCE_OPTIMIZED

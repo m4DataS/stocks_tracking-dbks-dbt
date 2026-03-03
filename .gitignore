@@ -1,0 +1,4 @@
+.databricks/
+.venv/
+local_ingest_output/
+requirements.txt

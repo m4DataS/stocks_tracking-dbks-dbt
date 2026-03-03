@@ -3,84 +3,116 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import os
+from typing import Any, Dict, List, Optional, Tuple, Union, Generator
 import pandas as pd
 import yfinance as yf
 import psutil
 import threading
 import time
+import requests
 
+# Thread-safe metrics collection
+metrics_lock = threading.Lock()
+all_metrics: List[Tuple[str, str, float, float, int]] = []
+chunk_metrics: List[Tuple[datetime, str, float, int]] = []
 
-def chunk_list(lst, size):
+def chunk_list(lst: List[Any], size: int) -> Generator[List[Any], None, None]:
     for i in range(0, len(lst), size):
         yield lst[i:i + size]
 
 
-def fetch_yahoo(tickers, start="2000-01-01", end=None):
-    df = yf.download(
-        tickers=tickers,
-        start=start,
-        end=end,
-        group_by="ticker",
-        auto_adjust=False,
-        threads=True,
-        progress=False
-    )
+def fetch_yahoo(tickers: List[str], start: str = "2000-01-01", end: Optional[str] = None, max_retries: int = 3) -> pd.DataFrame:
+    """
+    Fetch data from Yahoo Finance with retries and exponential backoff
+    to handle rate limiting (429 errors).
+    """
+    retries = 0
+    while retries < max_retries:
+        try:
+            df = yf.download(
+                tickers=tickers,
+                start=start,
+                end=end,
+                group_by="ticker",
+                auto_adjust=False,
+                threads=True,
+                progress=False
+            )
+            
+            if df.empty:
+                return pd.DataFrame()
 
-    records = []
+            records = []
+            for ticker in tickers:
+                if ticker not in df.columns.levels[0]:
+                    continue
 
-    for ticker in tickers:
-        if ticker not in df.columns.levels[0]:
-            continue
+                tmp = df[ticker].reset_index()
+                tmp["ticker"] = ticker
+                records.append(tmp)
 
-        tmp = df[ticker].reset_index()
-        tmp["ticker"] = ticker
-        records.append(tmp)
+            if not records:
+                return pd.DataFrame()
 
-    if not records:
-        return pd.DataFrame()
+            out = pd.concat(records)
+            out.columns = [c.lower().replace(" ", "_") for c in out.columns]
 
-    out = pd.concat(records)
-    out.columns = [c.lower().replace(" ", "_") for c in out.columns]
+            missing = set(tickers) - set(df.columns.levels[0])
+            if missing:
+                print(f"Missing tickers after successful download: {missing}")
 
-    missing = set(tickers) - set(df.columns.levels[0])
-    if missing:
-        print(f"Missing tickers: {missing}")
+            return out
 
-    return out
-
-
-def ingest_chunk(chunk, start, end, output_dir):
-    ts, stage, cpu, mem, threads = log_metrics(f"Start chunk {chunk}")
-    all_metrics.append((ts, stage, cpu, mem, threads))
-
-    start_time = time.time()
-    pdf = fetch_yahoo(chunk, start=start, end=end)
-    elapsed_sec = time.time() - start_time
-    rows_downloaded = len(pdf)
-
-    if pdf.empty:
-        print(f"Chunk {chunk} returned no data")
-        return {"chunk": chunk, "rows": 0, "elapsed_sec": elapsed_sec}
-
-    chunk_metrics.append(
-        (datetime.now(timezone.utc), str(chunk), elapsed_sec, rows_downloaded)
-    )
-
-    ts, stage, cpu, mem, threads = log_metrics(f"End chunk {chunk}")
-    all_metrics.append((ts, stage, cpu, mem, threads))
-
-    os.makedirs(output_dir, exist_ok=True)
-    file_name = os.path.join(output_dir, f"{chunk[0]}_{int(start_time)}.parquet")
-    pdf.to_parquet(file_name, index=False)
-
-    print(f"Saved {len(pdf)} rows for chunk {chunk} to {file_name}")
-
-    return {"chunk": chunk, "rows": len(pdf), "elapsed_sec": elapsed_sec}
+        except Exception as e:
+            retries += 1
+            wait_time = 2 ** retries
+            print(f"Error fetching data for {tickers}: {e}. Retry {retries}/{max_retries} in {wait_time}s...")
+            time.sleep(wait_time)
+            
+    return pd.DataFrame()
 
 
-def log_metrics(stage=""):
+def ingest_chunk(chunk: List[str], start: str, end: Optional[str], output_dir: str) -> Dict[str, Any]:
+    try:
+        ts, stage, cpu, mem, threads = log_metrics(f"Start chunk {chunk}")
+        with metrics_lock:
+            all_metrics.append((ts, stage, cpu, mem, threads))
+
+        start_time = time.time()
+        pdf = fetch_yahoo(chunk, start=start, end=end)
+        elapsed_sec = time.time() - start_time
+        rows_downloaded = len(pdf)
+
+        if pdf.empty:
+            print(f"Chunk {chunk} returned no data")
+            return {"chunk": chunk, "rows": 0, "elapsed_sec": elapsed_sec}
+
+        with metrics_lock:
+            chunk_metrics.append(
+                (datetime.now(timezone.utc), str(chunk), elapsed_sec, rows_downloaded)
+            )
+
+        ts, stage, cpu, mem, threads = log_metrics(f"End chunk {chunk}")
+        with metrics_lock:
+            all_metrics.append((ts, stage, cpu, mem, threads))
+
+        os.makedirs(output_dir, exist_ok=True)
+        file_name = os.path.join(output_dir, f"{chunk[0]}_{int(start_time)}.parquet")
+        pdf.to_parquet(file_name, index=False)
+
+        print(f"Saved {len(pdf)} rows for chunk {chunk} to {file_name}")
+        return {"chunk": chunk, "rows": len(pdf), "elapsed_sec": elapsed_sec}
+        
+    except Exception as e:
+        print(f"CRITICAL ERROR in chunk {chunk}: {e}")
+        return {"chunk": chunk, "rows": 0, "elapsed_sec": 0, "error": str(e)}
+
+
+def log_metrics(stage: str = "") -> Tuple[str, str, float, float, int]:
     p = psutil.Process()
-    cpu = p.cpu_percent(interval=1)
+    # interval=1 is blocking, we might want to reduce this if it slows down ingestion
+    # or use interval=None for instantaneous value
+    cpu = p.cpu_percent(interval=0.1) 
     mem = p.memory_info().rss / 1e6
     threads = threading.active_count()
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -89,15 +121,15 @@ def log_metrics(stage=""):
     return ts, stage, cpu, mem, threads
 
 
-def monitor_metrics(interval=5):
+def monitor_metrics(interval: int = 5) -> None:
     while not stop_monitoring.is_set():
         ts, stage, cpu, mem, threads = log_metrics("Monitor")
-        all_metrics.append((ts, stage, cpu, mem, threads))
+        with metrics_lock:
+            all_metrics.append((ts, stage, cpu, mem, threads))
         time.sleep(interval)
 
 
 BASE_PATH = "/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices"
-INGESTION_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 tickers_base = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
 
@@ -139,13 +171,9 @@ if __name__ == "__main__":
     else:
         tickers = [t.strip().upper() for t in args.tickers.split(",")]
 
-    print(f"Fetching data for {len(tickers)} tickers")
+    print(f"Fetching data for {len(tickers)} tickers with max_workers={args.max_workers} and chunk_size={args.chunk_size}")
 
     ticker_chunks = list(chunk_list(tickers, args.chunk_size))
-
-    results = []
-    all_metrics = []
-    chunk_metrics = []
 
     stop_monitoring = threading.Event()
     monitor_thread = threading.Thread(
@@ -154,6 +182,7 @@ if __name__ == "__main__":
     )
     monitor_thread.start()
 
+    results = []
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [
             executor.submit(ingest_chunk, chunk, args.start, args.end, args.output)
@@ -166,15 +195,12 @@ if __name__ == "__main__":
     stop_monitoring.set()
     monitor_thread.join()
 
-    metrics_df = pd.DataFrame(
-        all_metrics,
-        columns=["timestamp", "stage", "cpu_percent", "memory_mb", "threads"]
-    )
-
-    chunk_df = pd.DataFrame(
-        chunk_metrics,
-        columns=["timestamp", "chunk", "elapsed_sec", "rows_downloaded"]
-    )
-
-    total_rows = sum(r["rows"] for r in results)
+    # Final summary
+    total_rows = sum(r.get("rows", 0) for r in results)
+    errors = [r for r in results if "error" in r]
+    
+    print("-" * 50)
     print(f"Ingestion complete: {total_rows} rows saved from {len(results)} chunks.")
+    if errors:
+        print(f"Encountered {len(errors)} chunk errors.")
+    print("-" * 50)

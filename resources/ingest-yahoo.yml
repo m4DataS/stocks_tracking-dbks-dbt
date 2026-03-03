@@ -5,7 +5,7 @@ resources:
       tasks:
         - task_key: ingestion_yahoof
           spark_python_task:
-            python_file: /Workspace/Users/manoah4datascience@gmail.com/stocks_tracking-dbks-dbt/ingestion/python-multi-threading.py
+            python_file: ../ingestion/ingest_yahoof.py
             parameters:
               - --tickers
               - ${var.tickers}
@@ -30,6 +30,6 @@ resources:
           spec:
             dependencies:
               - -r
-                /Workspace/Users/manoah4datascience@gmail.com/stocks_tracking-dbks-dbt/ingestion/requirements.txt
+                ../ingestion/setup/requirements.txt
             environment_version: "4"
       performance_target: PERFORMANCE_OPTIMIZED

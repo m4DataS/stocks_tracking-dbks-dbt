@@ -53,6 +53,4 @@ databricks_bundle_deploy:
   script:
     - databricks bundle deploy
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: manual
-    - when: never
+    - when: manual

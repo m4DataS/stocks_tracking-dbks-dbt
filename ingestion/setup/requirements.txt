@@ -1,2 +1,5 @@
-yfinance
-psutil
+yfinance==1.2.0
+psutil==7.2.2
+pandas==2.3.3
+pyarrow==21.0.0
+requests==2.32.5

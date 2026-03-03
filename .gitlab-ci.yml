@@ -15,10 +15,12 @@ secret_detection:
   stage: secret-detection
 
 .base_databricks:
-  image: python:3.10
+  image: "macos:latest"   # placeholder, GitLab Runner on your macOS VM will execute it
   before_script:
-    - apt-get update && apt-get install -y curl jq unzip
-    - curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/setup.sh | sh
+    - /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || echo "Homebrew already installed"
+    - eval "$(/opt/homebrew/bin/brew shellenv)" || eval "$(/usr/local/bin/brew shellenv)"
+    - brew install python jq unzip curl || echo "Dependencies already installed"
+    - brew install databricks-cli
     - databricks --version
 
 databricks_bundle_validate:

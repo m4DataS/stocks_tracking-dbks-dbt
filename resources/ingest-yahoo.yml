@@ -8,17 +8,17 @@ resources:
             python_file: /Workspace/Users/manoah4datascience@gmail.com/stocks_tracking-dbks-dbt/ingestion/python-multi-threading.py
             parameters:
               - --tickers
-              - all
+              - ${var.tickers}
               - --start
-              - 2000-01-01
+              - ${var.start_date}
               - --end
-              - 2026-02-07
+              - ${var.end_date}
               - --output
-              - /Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/
+              - ${var.output_path}
               - --max_workers
-              - "10"
+              - ${var.max_workers}
               - --chunk_size
-              - "5"
+              - ${var.chunk_size}
           environment_key: ingestion_yahoof_environment
       queue:
         enabled: true

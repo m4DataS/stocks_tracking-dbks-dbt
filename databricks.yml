@@ -18,7 +18,19 @@ include:
 #   scripts:
 #     predeploy: "databricks fs cp dist/${var.wheel_name} dbfs:/Volumes/dev_data_cloud_cicd/demo_da_cicd/demo_da_cicd_volume_DAB/ --overwrite --profile dev"
 
-# variables:
+variables:
+  tickers:
+    default: "all"
+  start_date:
+    default: "2000-01-01"
+  end_date:
+    default: "2026-02-07"
+  output_path:
+    default: "/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/"
+  max_workers:
+    default: "10"
+  chunk_size:
+    default: "5"
 
 
 targets:

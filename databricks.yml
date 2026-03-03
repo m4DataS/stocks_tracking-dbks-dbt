@@ -7,7 +7,7 @@ include:
  
 sync:
   paths:
-    - ingestion/ingestion/requirements.txt
+    - ingestion/requirements.txt
 
 # artifacts:
 #   default:

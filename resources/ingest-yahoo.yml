@@ -30,6 +30,6 @@ resources:
           spec:
             dependencies:
               - -r
-                ../ingestion/setup/requirements.txt
+                ../ingestion/requirements.txt
             environment_version: "4"
       performance_target: PERFORMANCE_OPTIMIZED

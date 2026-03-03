@@ -8,6 +8,7 @@ include:
 sync:
   paths:
     - ingestion/requirements.txt
+    - ingestion/ingest_yahoof.py
 
 # artifacts:
 #   default:

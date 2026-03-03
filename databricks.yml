@@ -5,8 +5,9 @@ bundle:
 include:
   - resources/*.yml
  
-# sync:
-#   paths:
+sync:
+  paths:
+    - ingestion/ingestion/requirements.txt
 
 # artifacts:
 #   default:

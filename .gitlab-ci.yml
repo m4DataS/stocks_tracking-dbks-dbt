@@ -25,7 +25,14 @@ secret_detection:
     - echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
     - eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
     # Install databricks-cli via brew
-    - brew install databricks-cli
+    - brew tap databricks/tap
+    - brew install databricks
+    - |
+      # Optional: add databricks completions (bash)
+      if [ -f "$(brew --prefix)/etc/bash_completion.d/databricks" ]; then
+          echo "source $(brew --prefix)/etc/bash_completion.d/databricks" >> ~/.bashrc
+          source $(brew --prefix)/etc/bash_completion.d/databricks
+      fi
     # Verify installation
     - databricks --version
 

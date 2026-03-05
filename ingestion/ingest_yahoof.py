@@ -1,7 +1,7 @@
 # python multi threading
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union, Generator
 import pandas as pd
@@ -18,6 +18,7 @@ chunk_metrics: List[Tuple[datetime, str, float, int]] = []
 
 def chunk_list(lst: List[Any], size: int) -> Generator[List[Any], None, None]:
     for i in range(0, len(lst), size):
+        # Using a typed slice
         yield lst[i:i + size]
 
 
@@ -161,6 +162,17 @@ if __name__ == "__main__":
     parser.add_argument("--metric_interval", type=int, default=5)
 
     args = parser.parse_args()
+
+    # Dynamic date calculation for daily automation
+    # If no dates are provided, or if Databricks dynamic tokens are passed as literals
+    # (which happens during local runs or if the variables aren't resolved)
+    if not args.start or "{{" in args.start:
+        args.start = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+        print(f"Start date is empty or a token. Defaulting to yesterday: {args.start}")
+    
+    if not args.end or "{{" in args.end:
+        args.end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        print(f"End date is empty or a token. Defaulting to today: {args.end}")
 
     if args.tickers is None:
         tickers = tickers_base

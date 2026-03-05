@@ -24,9 +24,9 @@ variables:
   tickers:
     default: "all"
   start_date:
-    default: "2000-01-01"
+    default: "{{job.start_time.iso_date_minus_1d}}"
   end_date:
-    default: "2026-02-07"
+    default: "{{job.start_time.iso_date}}"
   output_path:
     default: "/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/"
   max_workers:

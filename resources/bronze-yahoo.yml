@@ -1,0 +1,42 @@
+resources:
+  jobs:
+    bronze_yahoo_ingestion:
+      name: bronze_yahoo_ingestion
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: ${var.output_path}
+          # min_time_between_triggers_seconds: 60
+      parameters:
+        - name: input_path
+          default: "/Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/ingestion/"
+        - name: output_table
+          default: "workspace.finance_tracking_stocks.bronze_yahoo_stocks"
+        - name: checkpoint_path
+          default: "/Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/checkpoint/"
+
+      tasks:
+        - task_key: create_bronze_table
+          sql_task:
+            file:
+              path: ../medaillon_layer/bronze_table_crea.sql
+              source: WORKSPACE
+            warehouse_id:  ${var.sql_warehouse_id}
+
+        - task_key: bronze_ingestion
+          spark_python_task:
+            python_file: ../medaillon_layer/bronze_yahoo.py
+            parameters:
+              - --input_path
+              - "{{job.parameters.input_path}}"
+              - --output_table
+              - "{{job.parameters.output_table}}"
+              - --checkpoint_path
+              - "{{job.parameters.checkpoint_path}}"
+          depends_on:
+            - task_key: create_bronze_table
+          environment_key: bronze_environment
+      environments:
+        - environment_key: bronze_environment
+          spec:
+            environment_version: "4"

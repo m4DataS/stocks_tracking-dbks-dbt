@@ -113,7 +113,7 @@ def monitor_metrics(interval=5):
         time.sleep(interval)
 
 ########## Params definition
-BASE_PATH = "/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices"
+BASE_PATH = "/Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/ingestion/"
 INGESTION_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 CHUNK_SIZE = 50        # number of tickers per API call
@@ -149,7 +149,7 @@ if __name__ == "__main__":
                         help="Comma-separated tickers (e.g. AAPL,MSFT) OR 'top30', 'all' for pre-defined lists")
     parser.add_argument("--start", type=str, default="2000-01-01", help="Start date YYYY-MM-DD")
     parser.add_argument("--end", type=str, default=None, help="End date YYYY-MM-DD")
-    parser.add_argument("--output", type=str, default="/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/", help="Output directory for parquet files")
+    parser.add_argument("--output", type=str, default="/Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/ingestion/", help="Output directory for parquet files")
     parser.add_argument("--max_workers", type=int, default=5, help="Number of threads")
     parser.add_argument("--chunk_size", type=int, default=10, help="Number of tickers per chunk")
     parser.add_argument("--metric_interval", type=int, default=5, help="Start monitor thread a separate thread that samples CPU/memory/threads every X seconds")

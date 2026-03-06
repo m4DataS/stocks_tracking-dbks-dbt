@@ -9,6 +9,8 @@ sync:
   paths:
     - ingestion/requirements.txt
     - ingestion/ingest_yahoof.py
+    - medaillon_layer/bronze_yahoo.py
+    - medaillon_layer/bronze_table_crea.sql
 
 # artifacts:
 #   default:
@@ -21,24 +23,22 @@ sync:
 #     predeploy: "databricks fs cp dist/${var.wheel_name} dbfs:/Volumes/dev_data_cloud_cicd/demo_da_cicd/demo_da_cicd_volume_DAB/ --overwrite --profile dev"
 
 variables:
-  tickers:
-    default: "all"
-  start_date:
-    default: "{{job.start_time.iso_date_minus_1d}}"
-  end_date:
-    default: "{{job.start_time.iso_date}}"
   output_path:
-    default: "/Volumes/workspace/finance_news/stock-tracking/yahoo/stock_prices/"
-  max_workers:
-    default: "10"
-  chunk_size:
-    default: "5"
+    default: "/Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/ingestion/"
+  bronze_table:
+    default: "workspace.finance_tracking_stocks.bronze_yahoo_stocks"
+  sql_warehouse_id:
+    default: "4a8ac7ceb7600210"
 
 
 targets:
   dev:
     mode: development
     default: true
+    variables:
+      sql_warehouse_id:
+        lookup: 
+          warehouse: "Serverless Starter Warehouse"
     workspace:
       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
     permissions:

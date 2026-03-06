@@ -1,0 +1,9 @@
+resources:
+
+  volumes:
+    stock_data:
+      catalog_name: workspace
+      schema_name: finance_tracking_stocks
+      name: stock_data
+      volume_type: MANAGED
+      comment: "Volume for storing ingestion stocks data"

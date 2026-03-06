@@ -45,7 +45,7 @@ df_spark.show(5)
 
 ##### Save as Parquet
 
-BASE_PATH = "/FileStore/finance_news/stock-tracking/yahoo/stock_prices_spark"
+BASE_PATH = "/FileStore/finance_tracking_stocks/stock_data/yahoo/ingestion/"
 INGESTION_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 output_path = f"{BASE_PATH}/{INGESTION_DATE}/"
 

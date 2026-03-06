@@ -337,7 +337,7 @@ if __name__ == "__main__":
         elif interval == "15m":
             args.end = ref + timedelta(hours=1)
         else:
-            args.end = ref.strftime("%Y-%m-%d")
+            args.end = now.strftime("%Y-%m-%d")
 
         print(f"End auto (start provided): {args.start} → {args.end}")
 

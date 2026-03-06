@@ -337,7 +337,7 @@ if __name__ == "__main__":
         elif interval == "15m":
             args.end = ref + timedelta(hours=1)
         else:
-            args.end = now
+            args.end = ref.strftime("%Y-%m-%d")
 
         print(f"End auto (start provided): {args.start} → {args.end}")
 
@@ -347,6 +347,9 @@ if __name__ == "__main__":
     else:
         print(f"Using provided window: {args.start} → {args.end}")
 
+    # --------------------------------------------------
+    # Tickers management
+    # --------------------------------------------------
     if args.tickers.lower() == "base":
         tickers = tickers_base
     elif args.tickers.lower() == "top30":

@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
+import pytz
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union, Generator
 import pandas as pd
@@ -264,26 +265,87 @@ if __name__ == "__main__":
     # Dynamic date calculation for daily automation
     # If no dates are provided, or if Databricks dynamic tokens are passed as literals
     # (which happens during local runs or if the variables aren't resolved)
-    start_val = getattr(args, "start", None)
-    if not start_val or "{{" in str(start_val):
-        args.start = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
-        print(f"Start date is empty or a token. Defaulting to yesterday: {args.start}")
-    else:
-        print(f"Start date is: {args.start}")
-    
-    end_val = getattr(args, "end", None)
-    if not end_val or "{{" in str(end_val):
-        args.end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        print(f"End date is empty or a token. Defaulting to today: {args.end}") 
-    else:
-        print(f"End date is: {args.end}")
-    
-    interval_val = getattr(args, "interval", None)
-    if not interval_val or "{{" in str(interval_val):
+    interval = getattr(args, "interval", None)
+    # --------------------------------------------------
+    # DEFAULT interval fallback
+    # --------------------------------------------------
+    if not interval or "{{" in str(interval):
         args.interval = "1d"
-        print(f"Interval is empty or a token. Defaulting to: {args.interval}")
+        print("Interval empty or token → default to 1d")
     else:
-        print(f"Interval is: {args.interval}")
+        print(f"Interval: {args.interval}")
+    print(f"Requested interval: {interval}")
+    ny = pytz.timezone("America/New_York")
+    now = datetime.now(ny)
+
+    start_val = getattr(args, "start", None)
+    end_val = getattr(args, "end", None)
+
+    # --------------------------------------------------
+    # CASE 1: BOTH start AND end NOT provided
+    # -> compute full window based on interval
+    # --------------------------------------------------
+    if (not start_val or "{{" in str(start_val)) and (not end_val or "{{" in str(end_val)):
+        if interval == "1m":
+            args.end = now
+            args.start = now - timedelta(minutes=1)
+            print(f"Streaming window (both missing): {args.start} → {args.end}")
+
+        elif interval == "15m":
+            args.end = now
+            args.start = now - timedelta(hours=1)
+            print(f"Hourly window (both missing): {args.start} → {args.end}")
+
+        else:
+            args.start = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+            args.end = now.strftime("%Y-%m-%d")
+            print(f"Daily window (both missing): {args.start} → {args.end}")
+
+    # --------------------------------------------------
+    # CASE 2: ONLY start MISSING -> use end (or now) - window
+    # --------------------------------------------------
+    elif not start_val or "{{" in str(start_val):
+        if not end_val or "{{" in str(end_val):
+            ref = now
+        else:
+            try:
+                ref = datetime.fromisoformat(str(end_val))
+            except Exception:
+                ref = now
+
+        if interval == "1m":
+            args.start = ref - timedelta(minutes=1)
+        elif interval == "15m":
+            args.start = ref - timedelta(hours=1)
+        else:
+            args.start = (ref - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        args.end = ref
+        print(f"Start auto (end provided): {args.start} → {args.end}")
+
+    # --------------------------------------------------
+    # CASE 3: ONLY end MISSING -> use start + window
+    # --------------------------------------------------
+    elif not end_val or "{{" in str(end_val):
+        try:
+            ref = datetime.fromisoformat(str(start_val))
+        except Exception:
+            ref = now
+
+        if interval == "1m":
+            args.end = ref + timedelta(minutes=1)
+        elif interval == "15m":
+            args.end = ref + timedelta(hours=1)
+        else:
+            args.end = now
+
+        print(f"End auto (start provided): {args.start} → {args.end}")
+
+    # --------------------------------------------------
+    # CASE 4: BOTH provided -> use as-is
+    # --------------------------------------------------
+    else:
+        print(f"Using provided window: {args.start} → {args.end}")
 
     if args.tickers.lower() == "base":
         tickers = tickers_base

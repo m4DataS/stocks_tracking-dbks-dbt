@@ -1,0 +1,67 @@
+resources:
+  jobs:
+    finan_tracking_ingestion_1m:
+      name: finan_tracking_ingestion_1m
+
+      schedule:
+        pause_status: UNPAUSED
+        quartz_cron_expression: "0 * 9-16 ? * MON-FRI"
+        timezone_id: "America/New_York"
+
+      parameters:
+        - name: tickers
+          default: >
+            AAPL,MSFT,GOOGL,NVDA,AMZN,META,TSLA,PCAR,MDLZ,INSM,
+            ALNY,ZS,CSGP,KDP,CCEP,HON,INTU,MAR,MCHP,BKR,
+            VRSK,MELI,WMT,SBUX,AMGN,DDOG,FTNT,CEG,STX,CSCO,
+            AMAT,MRVL,APP,WDC,ARM,ADBE,ORCL,NFLX,PYPL,LRCX,
+            CRM,INTC,QCOM,TXN,AMD,BKNG,EXC,ADP,MU,NVAX,
+            ROST,BIIB,F,GM,GE,BA,NKE,SBUX,SHOP,SQ,PLTR,
+            UBER,LYFT,CRWD,SNAP,ZM,DOCU,ETSY,SPOT,COIN,
+            TWTR,GOOG
+        - name: start
+          default: ""
+        - name: end
+          default: ""
+        - name: interval
+          default: "1m"
+        - name: output
+          default: /Volumes/workspace/finance_tracking_stocks/stock_data/yahoo/ingestion/
+        - name: max_workers
+          default: 3
+        - name: chunk_size
+          default: 5
+
+      tasks:
+        - task_key: ingestion_yahoof
+          spark_python_task:
+            python_file: ../ingestion/ingest_yahoof.py
+            parameters:
+              - --tickers
+              - "{{job.parameters.tickers}}"
+              - --start
+              - "{{job.parameters.start}}"
+              - --end
+              - "{{job.parameters.end}}"
+              - --interval
+              - "{{job.parameters.interval}}"
+              - --output
+              - "{{job.parameters.output}}"
+              - --max_workers
+              - "{{job.parameters.max_workers}}"
+              - --chunk_size
+              - "{{job.parameters.chunk_size}}"
+          environment_key: ingestion_yahoof_environment
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "4"
+        - environment_key: ingestion_yahoof_environment
+          spec:
+            dependencies:
+              - -r
+                ../ingestion/requirements.txt
+            environment_version: "4"
+      performance_target: PERFORMANCE_OPTIMIZED

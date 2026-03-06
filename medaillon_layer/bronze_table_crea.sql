@@ -23,4 +23,3 @@ CREATE TABLE IF NOT EXISTS workspace.finance_tracking_stocks.bronze_yahoo_stocks
   ingestion_time TIMESTAMP
 )
 USING DELTA
-PARTITIONED BY (ticker);

@@ -7,10 +7,15 @@ This pipeline implements **multi-frequency ingestion** (also called **multi-gran
 Example intervals:
 
 - `1m` – minute data
+- `2m`
 - `5m`
 - `15m`
+- `30m`
+- `60m`
 - `1h`
 - `1d` – daily data
+- `5d`
+- `...`
 
 This pattern is common in **quantitative finance pipelines** and allows the same dataset to serve **different analytical and ML purposes**.
 

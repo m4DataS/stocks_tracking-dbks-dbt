@@ -265,38 +265,53 @@ if __name__ == "__main__":
     # Dynamic date calculation for daily automation
     # If no dates are provided, or if Databricks dynamic tokens are passed as literals
     # (which happens during local runs or if the variables aren't resolved)
-    interval = getattr(args, "interval", None)
+    interval = args.interval
     # --------------------------------------------------
     # DEFAULT interval fallback
     # --------------------------------------------------
     if not interval or "{{" in str(interval):
         args.interval = "1d"
+        interval = "1d"
         print("Interval empty or token → default to 1d")
     else:
         print(f"Interval: {args.interval}")
-    print(f"Requested interval: {interval}")
+    
     ny = pytz.timezone("America/New_York")
     now = datetime.now(ny)
 
-    start_val = getattr(args, "start", None)
-    end_val = getattr(args, "end", None)
+    def parse_dt(val: Any) -> Optional[datetime]:
+        if not val or "{{" in str(val):
+            return None
+        try:
+            # Handle space or T separator
+            s = str(val).replace("T", " ")
+            dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+            return ny.localize(dt)
+        except ValueError:
+            try:
+                dt = datetime.strptime(str(val), "%Y-%m-%d")
+                return ny.localize(dt)
+            except ValueError:
+                return None
+
+    start_dt = parse_dt(getattr(args, "start", None))
+    end_dt = parse_dt(getattr(args, "end", None))
 
     # --------------------------------------------------
     # CASE 1: BOTH start AND end NOT provided
     # -> compute full window based on interval
     # --------------------------------------------------
-    if (not start_val or "{{" in str(start_val)) and (not end_val or "{{" in str(end_val)):
+    if not start_dt and not end_dt:
         if interval == "1m":
             args.end = now
             args.start = now - timedelta(minutes=1)
             print(f"Streaming window (both missing): {args.start} → {args.end}")
-
         elif interval == "15m":
             args.end = now
             args.start = now - timedelta(hours=1)
             print(f"Hourly window (both missing): {args.start} → {args.end}")
-
         else:
+            # For 1d, yf.download works better with strings "YYYY-MM-DD"
             args.start = (now - timedelta(days=1)).strftime("%Y-%m-%d")
             args.end = now.strftime("%Y-%m-%d")
             print(f"Daily window (both missing): {args.start} → {args.end}")
@@ -304,47 +319,39 @@ if __name__ == "__main__":
     # --------------------------------------------------
     # CASE 2: ONLY start MISSING -> use end (or now) - window
     # --------------------------------------------------
-    elif not start_val or "{{" in str(start_val):
-        if not end_val or "{{" in str(end_val):
-            ref = now
-        else:
-            try:
-                ref = datetime.fromisoformat(str(end_val))
-            except Exception:
-                ref = now
-
+    elif not start_dt:
+        ref = end_dt if end_dt else now
         if interval == "1m":
             args.start = ref - timedelta(minutes=1)
         elif interval == "15m":
             args.start = ref - timedelta(hours=1)
         else:
             args.start = (ref - timedelta(days=1)).strftime("%Y-%m-%d")
-
+        
         args.end = ref
         print(f"Start auto (end provided): {args.start} → {args.end}")
 
     # --------------------------------------------------
     # CASE 3: ONLY end MISSING -> use start + window
     # --------------------------------------------------
-    elif not end_val or "{{" in str(end_val):
-        try:
-            ref = datetime.fromisoformat(str(start_val))
-        except Exception:
-            ref = now
-
+    elif not end_dt:
+        ref = start_dt
         if interval == "1m":
             args.end = ref + timedelta(minutes=1)
         elif interval == "15m":
             args.end = ref + timedelta(hours=1)
         else:
             args.end = now.strftime("%Y-%m-%d")
-
+        
+        args.start = ref
         print(f"End auto (start provided): {args.start} → {args.end}")
 
     # --------------------------------------------------
-    # CASE 4: BOTH provided -> use as-is
+    # CASE 4: BOTH provided -> use as-is but normalized
     # --------------------------------------------------
     else:
+        args.start = start_dt
+        args.end = end_dt
         print(f"Using provided window: {args.start} → {args.end}")
 
     # --------------------------------------------------

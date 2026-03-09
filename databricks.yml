@@ -1,0 +1,39 @@
+---
+bundle:
+  name: finance_tracking_2
+ 
+include:
+  - resources/*.yml
+ 
+sync:
+  paths:
+    - ingestion/ingestion_finnhub.py
+
+# artifacts:
+#   default:
+#     type: whl
+#     path: .
+#     build: python -m build --wheel --outdir dist
+
+# experimental:
+#   scripts:
+#     predeploy: "databricks fs cp dist/${var.wheel_name} dbfs:/Volumes/dev_data_cloud_cicd/demo_da_cicd/demo_da_cicd_volume_DAB/ --overwrite --profile dev"
+
+variables:
+  sql_warehouse_id:
+    default: "4a8ac7ceb7600210"
+
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      sql_warehouse_id:
+        lookup: 
+          warehouse: "Serverless Starter Warehouse"
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - user_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE

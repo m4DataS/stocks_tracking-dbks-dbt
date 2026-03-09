@@ -1,0 +1,37 @@
+resources:
+  jobs:
+    ingestion_finnhub:
+      name: ingestion_finnhub
+      schedule:
+        pause_status: UNPAUSED
+        quartz_cron_expression: "0 */2 * ? * *"  # every 2 minutes
+        timezone_id: "UTC"
+
+      parameters:
+        - name: base_url
+          default: "https://ca-finnhub-ws-endpoint.salmonrock-60dca45f.westus2.azurecontainerapps.io/"
+        - name: checkpoint_path
+          default: "/Volumes/workspace/finance_tracking_stocks/stock_data/finnhub/checkpoint/since_ts.txt"
+        - name: output_path
+          default: "/Volumes/workspace/finance_tracking_stocks/stock_data/finnhub/ingestion/"
+        - name: limit
+          default: 500
+
+      tasks:
+        - task_key: ingestion_finnhub_task
+          spark_python_task:
+            python_file: ../ingestion/ingestion_finnhub.py
+            parameters:
+              - --base_url
+              - "{{job.parameters.base_url}}"
+              - --checkpoint_path
+              - "{{job.parameters.checkpoint_path}}"
+              - --output_path
+              - "{{job.parameters.output_path}}"
+              - --limit
+              - "{{job.parameters.limit}}"
+          environment_key: bronze_environment
+      environments:
+        - environment_key: bronze_environment
+          spec:
+            environment_version: "4"

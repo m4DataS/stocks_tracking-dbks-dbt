@@ -67,10 +67,8 @@ mirror_to_github:
     - cd stocks_tracking-dbks-dbt
     - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/m4DataS/stocks_tracking-dbks-dbt.git
     - git branch -a
-    # Push all branches
-    - git push github --all --force
-    # Push tags too (optional)
-    - git push github --tags --force
+    # Push all branches + tags
+    - git push github --mirror --force
   only:
     - schedules
     - feature/ingestion_yahoof

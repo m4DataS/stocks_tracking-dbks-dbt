@@ -67,8 +67,14 @@ mirror_to_github:
     - cd stocks_tracking-dbks-dbt
     - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/m4DataS/stocks_tracking-dbks-dbt.git
     - git branch -a
-    # Push all branches + tags
-    - git push github --mirror --force
+    # Create local tracking branches for every origin/* ref (except HEAD)
+    - |
+      for b in $(git branch -r | grep -v '\->'); do
+        git branch --track "${b#origin/}" "$b" || true
+      done
+    # Now push all *local* branches and tags
+    - git push github --all --force
+    - git push github --tags --force
   only:
     - schedules
     - feature/ingestion_yahoof

@@ -66,7 +66,7 @@ mirror_to_github:
     - git clone https://$GITLAB_SOURCE_USERNAME:$GITLAB_SOURCE_PAT@gitlab.com/databricks_tests1/stocks_tracking-dbks-dbt.git
     - cd stocks_tracking-dbks-dbt
     - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/m4DataS/stocks_tracking-dbks-dbt.git
-
+    - git branch -a
     # Push all branches
     - git push github --all --force
     # Push tags too (optional)

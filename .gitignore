@@ -3,3 +3,5 @@
 local_ingest_output/
 /requirements.txt
 improvements.md
+.vscode/
+.data/

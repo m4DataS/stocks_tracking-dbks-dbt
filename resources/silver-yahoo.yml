@@ -1,0 +1,64 @@
+resources:
+  jobs:
+    silver_yahoo_cdf:
+      name: silver_yahoo_cdf
+      trigger:
+        pause_status: UNPAUSED
+        table_update:
+          table_names:
+            - workspace.finance_tracking_stocks.bronze_yahoo_stocks
+
+      parameters:
+        - name: catalog
+          default: "workspace"
+        - name: schema
+          default: "finance_tracking_stocks"
+        - name: tickers
+          default: >
+            AAPL,MSFT,GOOGL,NVDA,AMZN,META,TSLA,ORCL,NFLX
+        - name: ticker
+          default: "AAPL"
+        - name: backfill
+          default: "false"
+        - name: backfill_start
+          default: "1900-01-01"
+        - name: backfill_end
+          default: "2100-01-01"
+
+      tasks:
+        - task_key: silver_setup
+          spark_python_task:
+            python_file: ../medaillon_layer/silver_setup.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+              - --tickers
+              - "{{job.parameters.tickers}}"
+          environment_key: silver_environment
+
+        - task_key: silver_processing
+          spark_python_task:
+            python_file: ../medaillon_layer/silver_processing.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+              - --ticker
+              - "{{job.parameters.ticker}}"
+              - --backfill
+              - "{{job.parameters.backfill}}"
+              - --backfill_start
+              - "{{job.parameters.backfill_start}}"
+              - --backfill_end
+              - "{{job.parameters.backfill_end}}"
+          depends_on:
+            - task_key: silver_setup
+          environment_key: silver_environment
+
+      environments:
+        - environment_key: silver_environment
+          spec:
+            environment_version: "4"

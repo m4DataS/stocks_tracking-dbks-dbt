@@ -11,6 +11,8 @@ sync:
     - ingestion/ingest_yahoof.py
     - medaillon_layer/bronze_yahoo.py
     - medaillon_layer/bronze_table_crea.sql
+    - medaillon_layer/silver_setup.py
+    - medaillon_layer/silver_processing.py
 
 # artifacts:
 #   default:

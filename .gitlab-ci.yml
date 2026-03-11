@@ -1,5 +1,6 @@
 ---
 stages:
+- sync
 - test
 - secret-detection
 - validate
@@ -54,3 +55,22 @@ databricks_bundle_deploy:
     - databricks bundle deploy
   rules:
     - when: manual
+
+mirror_to_github:
+  stage: sync
+  script:
+    - git config --global user.email "m4data@auto.com"
+    - git config --global user.name "GitLab CI"
+    - GITLAB_SOURCE_USERNAME=${GITLAB_SOURCE_USERNAME::-1}
+    - GITHUB_USERNAME=${GITHUB_USERNAME::-1}
+    - git clone https://$GITLAB_SOURCE_USERNAME:$GITLAB_SOURCE_PAT@gitlab.com/databricks_tests/stocks_tracking-dbks-dbt.git
+    - cd stocks_tracking-dbks-dbt
+    - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/m4DataS/stocks_tracking-dbks-dbt.git
+
+    # Push all branches
+    - git push github --all
+    # Push tags too (optional)
+    - git push github --tags
+  only:
+    - schedules
+    - feature/ingestion_yahoof

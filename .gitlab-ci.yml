@@ -63,9 +63,9 @@ mirror_to_github:
     - git config --global user.name "GitLab CI"
     - GITLAB_SOURCE_USERNAME=${GITLAB_SOURCE_USERNAME::-1}
     - GITHUB_USERNAME=${GITHUB_USERNAME::-1}
-    - git clone https://$GITLAB_SOURCE_USERNAME:$GITLAB_SOURCE_PAT@gitlab.com/databricks_tests1/stocks_tracking-dbks-dbt.git
+    - git clone https://$GITLAB_SOURCE_USERNAME:$GITLAB_SOURCE_PAT@$GITLAB_SOURCE_PATH.git
     - cd stocks_tracking-dbks-dbt
-    - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@github.com/m4DataS/stocks_tracking-dbks-dbt.git
+    - git remote add github https://$GITHUB_USERNAME:$GITHUB_PAT@$GITHUB_PATH.git
     - git branch -a
     # Create local tracking branches for every origin/* ref (except HEAD)
     - |
